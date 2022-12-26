@@ -1,6 +1,6 @@
 <div class="content-wrapper">
     
-<?php include_once('page_headder.php')?>
+<?php include_once('page_header.php')?>
       <!-- Main content -->
       <div class="content">
           <div class="container-fluid">

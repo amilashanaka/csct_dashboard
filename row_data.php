@@ -1,6 +1,6 @@
 <?php
 include_once './data/data_list.php';
-include_once('headder.php');
+include_once('header.php');
 
 ?>
 
@@ -18,16 +18,16 @@ include_once('headder.php');
         <div class="content-wrapper">
             <!-- Content Header (Page header) -->
 
-            <?php 
-            
-            $t1="Lotto";
+            <?php
+            $title = "Row Data Set";
+            $t1="Data";
             $t2= "  List";
             
           
             
             ?>
 
-<?php include_once('page_headder.php')?>
+<?php include_once('page_header.php')?>
 
             <!-- Main content -->
             <section class="content">

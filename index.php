@@ -1,6 +1,12 @@
 <?php
+
 include_once('inc/conn.php');
-include_once('headder.php');
+include_once('header.php');
+
+
+
+
+
 
 
 ?>
@@ -14,7 +20,7 @@ include_once('headder.php');
         <!-- Main Sidebar Container -->
         <?php include_once('./side_bar.php'); ?>
 
-        <?php include_once('page.php');?>
+        <?php include_once('dash_board.php');?>
 
         <?php include_once('control_side_bar.php');?>
 
