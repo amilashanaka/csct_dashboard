@@ -1,278 +1,138 @@
-# import libraries
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from collections import Counter
-import statistics
-import math
 
-#for LSTM model
-from sklearn.preprocessing import MinMaxScaler
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout
-
-# ignore warnings
-import warnings
-warnings.filterwarnings("ignore")
-
-from datetime import datetime as dt
-
-import pymysql
-import json
 from app import app
-
-from flask import Flask, jsonify, request, make_response
-from flask import flash, request
-
-import datetime
-from werkzeug.security  import generate_password_hash, check_password_hash
-from functools import wraps
-import requests
-import numpy as np
 import pandas as pd
-from sklearn import linear_model
-from datetime import datetime, timedelta
-
-from statsmodels.tsa.ar_model import AR
-
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-import matplotlib.pyplot as plt
-plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
-import pmdarima as pm
+import datetime as dt
+import numpy as np
 
 from sqlalchemy import create_engine
 
-# globally declare dataset
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow import keras
+from keras.models import Sequential 
+from keras.layers import Dense, LSTM, Dropout
+
+
+import matplotlib.pyplot as plt
+
+# Globally Declare data set 
+
 data_set =pd.DataFrame()
 
-# Tranning dataset with
+tranning_set=pd.DataFrame()
 
-tranning_data_set=pd.DataFrame()
-
-# Validation Data Set 
-
-validate_data_set=pd.DataFrame()
-
-# result data set 
-
-result_data_set_tranning=pd.DataFrame()
-
-result_data_set_forecast=pd.DataFrame()
-
-# Lstm model 
-model = Sequential()
+data_arr_x=np.array([])
+data_arr_y=np.array([])
 
 scaler = MinMaxScaler()
 
-train_close_len=0
+num_steps = 60
 
-# Support functions 
-
-def read_from_db():
-   
+def read_data_set():
+  
   global data_set
 
   db_connection_str = 'mysql+pymysql://root:@localhost/csct'
   db_connection = create_engine(db_connection_str)
-  df = pd.read_sql('SELECT * FROM product__demnd', con=db_connection)
-  data_set=df
-  return df
-
-
-def shape_input():
-  global tranning_data_set
-  global train_close_len
-  global scaler
-   # Create new data with only the "OrderDemand" column
-  orderD = tranning_data_set.filter(["OrderDemand"])
-  # Convert the dataframe to a np array
-  orderD_array = orderD.values
-  # See the train data len
-  train_close_len = math.ceil(len(orderD_array) * 0.8)
-  print(train_close_len)
-  # Normalize the data
-  
-  scaled_data = scaler.fit_transform(orderD_array)
-  # Create the training dataset
-  train_data = scaled_data[0 : train_close_len, :]
-  # Create X_train and y_train
-  X_train = []
-  y_train = []
-  for i in range(60, len(train_data)):
-      X_train.append(train_data[i - 60 : i, 0])
-      y_train.append(train_data[i, 0])
-      
-         
-
-  return X_train, y_train,scaled_data,orderD
-
-
-
+  data_set = pd.read_sql('SELECT * FROM sales', con=db_connection)
+  data_set['Date']= pd.to_datetime(data_set['Date']).dt.date
+  data_set.sort_values('Date', inplace=True)
+  data_set['Date']=data_set['Date'].astype(str)
+  data_set=data_set.set_index(data_set['Date'])
  
-@app.route('/setup',methods=['POST'])
-def start():
+  return data_set
 
+
+def reshape():
   global data_set
-  global tranning_data_set
-  global result_data_set_tranning
-  global result_data_set_forecast
-  global train_close_len
-  global scaler
+  global data_arr_x
+  global data_arr_y
+  global num_steps
 
-  global model
-
-
-
-  df=read_from_db()
-  data_set
-
-  data_set.rename(columns = {'Product_Code': 'ProductCode',
-                       'Product_Category': 'ProductCategory', 
-                       'Order_Demand': 'OrderDemand'}, inplace = True)
+  items=data_set.filter(['Items'])
+  item_arr=np.array(items.values)
+  scaled_data = scaler.fit_transform(item_arr)
+  print(scaled_data)
 
 
-
-  data_set.dropna(inplace=True)
-
-  data_set.sort_values('Date', ignore_index=True, inplace=True)
-
-
-  data_set['OrderDemand'] = data_set['OrderDemand'].str.replace('(',"")
-  data_set['OrderDemand'] = data_set['OrderDemand'].str.replace(')',"")
-  data_set['OrderDemand'] = data_set['OrderDemand'].astype('int64')
-
-  #Forecast the Order Demand with LSTM Model
-
-  df = data_set[(data_set['Date']>='2012-01-01') & (data_set['Date']<='2016-12-31')].sort_values('Date', ascending=True)
-  df = df.groupby('Date')['OrderDemand'].sum().reset_index()
-  tranning_data_set=df
-
-  X_train,y_train,scaled_data,orderD=shape_input()
-
-  #  make X_train and y_train np array
-  X_train, y_train = np.array(X_train), np.array(y_train)
-
-  # reshape the data
-  X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
- 
-
-    # create the testing dataset
-  test_data = scaled_data[train_close_len - 60 : , :]
-  # create X_test and y_test
-  X_test = []
-  y_test = df.iloc[train_close_len : , :]
-  for i in range(60, len(test_data)):
-      X_test.append(test_data[i - 60 : i, 0])
-
-  # convert the test data to a np array and reshape the test data
-  X_test = np.array(X_test)
-  X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-
-
-  model.add(LSTM(units=512, return_sequences=True, activation='relu', input_shape=(X_train.shape[1], 1)))
-
-
-  model.add(LSTM(units=256, activation='relu', return_sequences=False))
-
-
-  model.add(Dense(128))
   
-  model.add(Dense(64))
-
-  model.add(Dense(32))
-
-  model.add(Dense(1))
+  data_arr_x, data_arr_y = lstm_data_transform(scaled_data,scaled_data, num_steps=num_steps)
+  print ("The new shape of x is", data_arr_x.shape)
 
 
-  # compile the LSTM model
+
+  original_data=scaler.inverse_transform(scaled_data)
+  print(original_data)
+
+def split_data():
+  global data_arr_x
+  global data_arr_y
+  global num_steps
+
+  train_ind = int(0.8 * len(data_arr_x))
+  x_train = data_arr_x[:train_ind]
+  y_train = data_arr_y[:train_ind]
+  x_test = data_arr_x[train_ind:]
+  y_test = data_arr_y[train_ind:]
+
+  model = Sequential()
+  model.add(LSTM(512, activation='relu', input_shape=(num_steps, 1), 
+                return_sequences=False))
+  model.add(Dense(units=256, activation='relu'))
+  
+
+  model.add(Dense(units=1, activation='relu'))
+  adam = keras.optimizers.Adam(lr=0.0001)
+  
   model.compile(optimizer="Adam", loss="mean_squared_error", metrics=['mae'])
+  model.fit(x_train, y_train, epochs=20)
 
-  # train the LSTM model
-  model.fit(X_train, y_train,
-            epochs=5,
-            batch_size=32, 
-            verbose=1)
+  test_predict = model.predict(x_test)
 
-
-  # predict with LSTM model
-  predictions = model.predict(X_test)
-  predictions = scaler.inverse_transform(predictions)
-
-  valid = orderD[train_close_len:]
-  valid["Predictions"] = predictions
-
-  result_data_set_tranning=df[:train_close_len]
-  result_data_set_forecast=df[train_close_len:]
-  result_data_set_forecast["Predictions"] = predictions
-
-
-  return "Setting up completed"
-
-
-start()
-
-@app.route("/plot",methods=['GET'])
-def plot():
-  global result_data_set_tranning
-  global result_data_set_forecast
-
-  #visualize the data
-  plt.figure(figsize=(16, 8))
-  plt.title("Forecast with LSTM Model")
-  plt.xlabel("Time", fontsize=14)
-  plt.ylabel("Order Demand", fontsize=14)
-  plt.plot(result_data_set_tranning["Date"], result_data_set_tranning["OrderDemand"])
-  plt.plot(result_data_set_forecast["Date"], result_data_set_forecast["OrderDemand"], result_data_set_forecast["Predictions"])
-  plt.legend(["Train", "Validation", "Predictions"], loc="lower right")
+  plt.style.use('ggplot')
+  plt.figure(figsize=(20, 7))
+  plt.plot(y_test, label="True value")
+  plt.plot(test_predict.ravel(), label="Predicted value")
+  plt.legend()
   plt.show()
 
-  return "plot"
 
-@app.route("/forecast",methods=["POST"])
-def forecast():
 
-  # read incomming json data 
-  data=request.get_json()
-  print(data)
+def lstm_data_transform(x_data, y_data, num_steps=5):
+    """ Changes data to the format for LSTM training 
+for sliding window approach """
+    # Prepare the list for the transformed data
+    X, y = list(), list()
+    # Loop of the entire data set
+    for i in range(x_data.shape[0]):
+        # compute a new (sliding window) index
+        end_ix = i + num_steps
+        # if index is larger than the size of the dataset, we stop
+        if end_ix >= x_data.shape[0]:
+            break
+        # Get a sequence of data for x
+        seq_X = x_data[i:end_ix]
+        # Get only the last element of the sequency for y
+        seq_y = y_data[end_ix]
+        # Append the list with sequencies
+        X.append(seq_X)
+        y.append(seq_y)
+    # Make final arrays
+    x_array = np.array(X)
+    y_array = np.array(y)
+    return x_array, y_array
 
-  return "forecast"
-
-@app.route("/category",methods=['GET'])
-
-def category():
+@app.route('/start',methods=['GET'])
+def start():
   global data_set
-  data=data_set['ProductCategory'].value_counts()
-  return data.to_json()
 
-@app.route("/warehouse",methods=['GET'])
-def warehouse():
-  global data_set
-  data=data_set['Warehouse'].value_counts()
-  return data.to_json()
+  print(data_set.info())
 
-
-@app.route("/by_year",methods=['GET'])
-
-def by_year():
-
-  global data_set
-  df = data_set[['OrderDemand', 'Year']].groupby(["Year"]).sum().reset_index().sort_values(by='Year', ascending=False)
-  return df.to_json()
-
-@app.route("/monthly",methods=['GET'])
-def monthly():
-  global data_set
-  temp_data = data_set.copy()
-  temp_data.Month.replace([1,2,3,4,5,6,7,8,9,10,11,12], ['Jan', 'Feb', 'Mar', 'Apr', 'May',
-                                                        'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], inplace=True)
-  df = temp_data[['OrderDemand',
-                  'Month', 'Year',]].groupby(["Year",
-                                              "Month"]).sum().reset_index().sort_values(by=['Year',
-                                                                                            'Month'], ascending=False)
-  df=df.T
-  return df.to_json()
+  return data_set.to_json(orient='records')
 
  
+read_data_set()
+reshape()
+split_data()
+
 if __name__ == "__main__":
     app.run()
