@@ -20,24 +20,58 @@ data_set =pd.DataFrame()
 
 tranning_set=pd.DataFrame()
 
+test_result=pd.DataFrame()
+
 data_arr_x=np.array([])
 data_arr_y=np.array([])
 
+x_train = np.array([])
+y_train = np.array([])
+x_test = np.array([])
+y_test = np.array([])
+
+test_predict  = np.array([])
+
+train_ind =0
+
+
 scaler = MinMaxScaler()
+
 
 num_steps = 60
 
 def read_data_set():
-  
+  # Declare global variable 
   global data_set
+  global tranning_data_set
 
+
+  # Define database connection 
   db_connection_str = 'mysql+pymysql://root:@localhost/csct'
   db_connection = create_engine(db_connection_str)
-  data_set = pd.read_sql('SELECT * FROM sales', con=db_connection)
+
+  # Read data in to Data Frame 
+  data_set = pd.read_sql('SELECT * FROM product__demnd', con=db_connection)
+  # Validate Date
   data_set['Date']= pd.to_datetime(data_set['Date']).dt.date
   data_set.sort_values('Date', inplace=True)
   data_set['Date']=data_set['Date'].astype(str)
+ 
+
+ 
+  # Remove Nan values 
+  
+
+  # Clean Order Demand 
+
+  data_set['Order_Demand'] = data_set['Order_Demand'].str.replace('(',"")
+  data_set['Order_Demand'] = data_set['Order_Demand'].str.replace(')',"")
+  data_set['Order_Demand'] = data_set['Order_Demand'].astype('int64')
+
+  tranning_data_set = data_set.groupby('Date')['Order_Demand'].sum().reset_index()
+  # Reset index
   data_set=data_set.set_index(data_set['Date'])
+  data_set.dropna(inplace=True)
  
   return data_set
 
@@ -47,8 +81,10 @@ def reshape():
   global data_arr_x
   global data_arr_y
   global num_steps
+  global tranning_data_set
+  global scaler
 
-  items=data_set.filter(['Items'])
+  items=tranning_data_set.filter(['Order_Demand'])
   item_arr=np.array(items.values)
   scaled_data = scaler.fit_transform(item_arr)
   print(scaled_data)
@@ -68,25 +104,42 @@ def split_data():
   global data_arr_y
   global num_steps
 
+  global x_train
+  global y_train
+
+  global x_test
+  global y_test
+
+  global train_ind
+
   train_ind = int(0.8 * len(data_arr_x))
   x_train = data_arr_x[:train_ind]
   y_train = data_arr_y[:train_ind]
   x_test = data_arr_x[train_ind:]
   y_test = data_arr_y[train_ind:]
 
+
+def lstmmodel():
+
+  
+  global test_predict
+
   model = Sequential()
+
   model.add(LSTM(512, activation='relu', input_shape=(num_steps, 1), 
                 return_sequences=False))
   model.add(Dense(units=256, activation='relu'))
   
 
   model.add(Dense(units=1, activation='relu'))
-  adam = keras.optimizers.Adam(lr=0.0001)
+  
   
   model.compile(optimizer="Adam", loss="mean_squared_error", metrics=['mae'])
-  model.fit(x_train, y_train, epochs=20)
+  model.fit(x_train, y_train, epochs=25)
 
   test_predict = model.predict(x_test)
+
+def plot_result():
 
   plt.style.use('ggplot')
   plt.figure(figsize=(20, 7))
@@ -129,10 +182,25 @@ def start():
 
   return data_set.to_json(orient='records')
 
+@app.route("/result_tranning",methods=['GET'])
+def result_tranning():
+  global test_result
+
+
+  test_len=len(tranning_data_set)-len(test_predict)
+  test_result=tranning_data_set[test_len:]
+  test_result['Predictions']=test_predict
+  test_result['OrderDemand']=y_test
+  # test_result=test_result.set_index(test_result['Date'])
+  return test_result.to_json(orient='records')
+
+
  
 read_data_set()
 reshape()
 split_data()
+lstmmodel()
+plot_result()
 
 if __name__ == "__main__":
     app.run()

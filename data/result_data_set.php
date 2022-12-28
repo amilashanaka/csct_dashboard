@@ -37,10 +37,12 @@ foreach ($arr as $key => $value) {
 
 
 
+
+
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
-  CURLOPT_URL => 'http://127.0.0.1:5000/result_validate',
+  CURLOPT_URL => 'http://127.0.0.1:5000/result_tranning',
   CURLOPT_RETURNTRANSFER => true,
   CURLOPT_ENCODING => '',
   CURLOPT_MAXREDIRS => 10,
@@ -49,6 +51,8 @@ curl_setopt_array($curl, array(
   CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
   CURLOPT_CUSTOMREQUEST => 'GET',
 ));
+
+
 
 $validate = curl_exec($curl);
 
