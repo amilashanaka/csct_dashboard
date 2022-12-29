@@ -11,6 +11,8 @@ from tensorflow import keras
 from keras.models import Sequential 
 from keras.layers import Dense, LSTM, Dropout
 
+from flask import Flask, jsonify, request, make_response
+from flask import flash, request
 
 import matplotlib.pyplot as plt
 
@@ -139,6 +141,9 @@ def lstmmodel():
 
   test_predict = model.predict(x_test)
 
+  # save model to single file
+  model.save('lstm_model.h5')
+
 def plot_result():
 
   plt.style.use('ggplot')
@@ -174,33 +179,83 @@ for sliding window approach """
     y_array = np.array(y)
     return x_array, y_array
 
+# End Points 
+
 @app.route('/start',methods=['GET'])
 def start():
   global data_set
-
   print(data_set.info())
-
   return data_set.to_json(orient='records')
 
-@app.route("/result_tranning",methods=['GET'])
-def result_tranning():
+@app.route("/validation",methods=['GET'])
+def validation():
   global test_result
-
-
   test_len=len(tranning_data_set)-len(test_predict)
   test_result=tranning_data_set[test_len:]
-  test_result['Predictions']=test_predict
-  test_result['OrderDemand']=y_test
-  # test_result=test_result.set_index(test_result['Date'])
+  test_result['Predictions']=scaler.inverse_transform(test_predict)
+  test_result['OrderDemand']=scaler.inverse_transform(y_test)
   return test_result.to_json(orient='records')
 
+@app.route("/tranning",methods=['GET'])
+def tranning():
+  return tranning_set.to_json(orient='records')
 
+
+@app.route("/forecast",methods=["POST"])
+def forecast():
+
+  # read incomming json data 
+  data=request.get_json()
+  print(data)
+
+  return "forecast"
+
+
+@app.route("/plot",methods=['GET'])
+def plot():
+  plot_result()
+
+@app.route("/category",methods=['GET'])
+
+def category():
+  global data_set
+  data=data_set['ProductCategory'].value_counts()
+  return data.to_json()
+
+@app.route("/warehouse",methods=['GET'])
+def warehouse():
+  global data_set
+  data=data_set['Warehouse'].value_counts()
+  return data.to_json()
+
+@app.route("/by_year",methods=['GET'])
+
+def by_year():
+
+  global data_set
+  df = data_set[['OrderDemand', 'Year']].groupby(["Year"]).sum().reset_index().sort_values(by='Year', ascending=False)
+  return df.to_json()
+
+@app.route("/monthly",methods=['GET'])
+def monthly():
+  global data_set
+  temp_data = data_set.copy()
+  temp_data.Month.replace([1,2,3,4,5,6,7,8,9,10,11,12], ['Jan', 'Feb', 'Mar', 'Apr', 'May',
+                                                        'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], inplace=True)
+  df = temp_data[['OrderDemand',
+                  'Month', 'Year',]].groupby(["Year",
+                                              "Month"]).sum().reset_index().sort_values(by=['Year',
+                                                                                            'Month'], ascending=False)
+  df=df.T
+  return df.to_json()
+
+ 
  
 read_data_set()
 reshape()
 split_data()
 lstmmodel()
-plot_result()
+
 
 if __name__ == "__main__":
     app.run()

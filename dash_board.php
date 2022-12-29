@@ -14,7 +14,7 @@
 
             <?php include_once './data/result_data_set.php';?>
 
-            <?php if($train_set!=''){?>
+            <?php if($date_validate!=''){?>
 
             <div class="row">
 
