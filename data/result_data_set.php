@@ -69,10 +69,10 @@ $error = '';
 
 foreach ($arr_new as $key => $value) {
    
-    $date_validate = $date_validate . "'" . $value['Date'] . "',";
-    $predection = $predection . "'" . $value['Predictions'] . "',";
-    $order_validate=  $order_validate."'".$value['OrderDemand']."',";
-    $error_val=abs($value['OrderDemand']-$value['Predictions']);
+    $date_validate = $date_validate . "'" .$value['Date']. "',";
+    $predection = $predection . "'" . round($value['Predictions']) . "',";
+    $order_validate=  $order_validate."'".round($value['OrderDemand'])."',";
+    $error_val=round(abs($value['OrderDemand']-$value['Predictions']));
     $error    = $error."'". $error_val."',";
  
 }

@@ -1,7 +1,13 @@
+#====================================================
+# Written By Don Gunasinha                          =
+# Master in Data Science                            =
+#====================================================
+
+# libarary declare 
 
 from app import app
 import pandas as pd
-import datetime as dt
+import datetime as dt 
 import numpy as np
 
 from sqlalchemy import create_engine
@@ -14,247 +20,260 @@ from keras.layers import Dense, LSTM, Dropout
 from flask import Flask, jsonify, request, make_response
 from flask import flash, request
 
+from datetime import datetime, timedelta
+
 import matplotlib.pyplot as plt
+
+#=================================================
 
 # Globally Declare data set 
 
+# Data Frames 
+raw_data_set=pd.DataFrame()
 data_set =pd.DataFrame()
-
+index_data_set =pd.DataFrame()
 tranning_set=pd.DataFrame()
+result=pd.DataFrame()
 
-test_result=pd.DataFrame()
-
+# numpy Arrays 
 data_arr_x=np.array([])
 data_arr_y=np.array([])
-
 x_train = np.array([])
 y_train = np.array([])
 x_test = np.array([])
 y_test = np.array([])
+predictions  = np.array([])
 
-test_predict  = np.array([])
+# Lstm Model 
+model = Sequential()
+feature_length = 100
 
-train_ind =0
+# Scaler 
+scaler =  MinMaxScaler(feature_range=(0,1))
 
 
-scaler = MinMaxScaler()
+#============================================
+
+# Support Functions definitions 
 
 
-num_steps = 60
+# Read data from data base and re arrange data 
 
 def read_data_set():
   # Declare global variable 
   global data_set
-  global tranning_data_set
-
+  global raw_data_set
+  global index_data_set
 
   # Define database connection 
   db_connection_str = 'mysql+pymysql://root:@localhost/csct'
   db_connection = create_engine(db_connection_str)
 
   # Read data in to Data Frame 
-  data_set = pd.read_sql('SELECT * FROM product__demnd', con=db_connection)
+  raw_data_set = pd.read_sql('SELECT * FROM aw_product_demand', con=db_connection)
+
+
   # Validate Date
-  data_set['Date']= pd.to_datetime(data_set['Date']).dt.date
+  raw_data_set['Date']= pd.to_datetime(raw_data_set['Date']).dt.date
+  raw_data_set['Order_Demand'] = raw_data_set['Order_Demand'].astype('int64')
+
+  #combine to single date
+  data_set = raw_data_set.groupby('Date')['Order_Demand'].sum().reset_index()
+  
   data_set.sort_values('Date', inplace=True)
   data_set['Date']=data_set['Date'].astype(str)
- 
 
- 
-  # Remove Nan values 
-  
+  # Create index data frame 
+  index_data_set=data_set
 
-  # Clean Order Demand 
+  index_data_set=index_data_set.set_index(index_data_set['Date'])
 
-  data_set['Order_Demand'] = data_set['Order_Demand'].str.replace('(',"")
-  data_set['Order_Demand'] = data_set['Order_Demand'].str.replace(')',"")
-  data_set['Order_Demand'] = data_set['Order_Demand'].astype('int64')
-
-  tranning_data_set = data_set.groupby('Date')['Order_Demand'].sum().reset_index()
-  # Reset index
-  data_set=data_set.set_index(data_set['Date'])
-  data_set.dropna(inplace=True)
- 
   return data_set
 
 
-def reshape():
+# Function to create x and y data
+def Create_Features_and_Targets(data, feature_length):
+  # Declare Xand Y List 
+  X = list()
+  Y = list()
+  for i in range(len(data) - feature_length -1):
+    # create X array shift by feature length 
+    X.append(data[i:(i + feature_length), 0])
+
+    Y.append(data[i + feature_length, 0])
+  # convert to numpy array format
+  X = np.array(X)
+  Y = np.array(Y)
+  return X,Y
+
+# function to calculate prediction 
+
+def predict_given_date(data, date, feature_length):
+  if date not in data.index:   
+    data.loc[date]=0
+  idx = data.index.get_loc(date)
+  close_col = data.iloc[:,1:2]
+  close_col = close_col.iloc[idx - feature_length : idx,:].values
+  close_col = np.expand_dims(scaler.transform(close_col) , axis = 0)
+  Prediction = model.predict(close_col)
+  Prediction=np.array(Prediction).reshape(-1, 1)
+  Prediction = scaler.inverse_transform(Prediction)
+  return Prediction
+# =========================== End of Function =================
+
+#============================= Main funtion ===================
+def setup():
+
+  # Declare Global variables =================
+
   global data_set
-  global data_arr_x
-  global data_arr_y
-  global num_steps
-  global tranning_data_set
-  global scaler
+  global predictions
+  global result
 
-  items=tranning_data_set.filter(['Order_Demand'])
-  item_arr=np.array(items.values)
-  scaled_data = scaler.fit_transform(item_arr)
-  print(scaled_data)
+  # Read Data from DataSet
+  read_data_set()
 
-
-  
-  data_arr_x, data_arr_y = lstm_data_transform(scaled_data,scaled_data, num_steps=num_steps)
-  print ("The new shape of x is", data_arr_x.shape)
+  # Filter order Deamands array 
+  data_set["Order_Demand"]=pd.to_numeric(data_set.Order_Demand,errors='coerce')
+  data = data_set.iloc[:,1:2]
+  data = data.values 
 
 
-
-  original_data=scaler.inverse_transform(scaled_data)
-  print(original_data)
-
-def split_data():
-  global data_arr_x
-  global data_arr_y
-  global num_steps
-
-  global x_train
-  global y_train
-
-  global x_test
-  global y_test
-
-  global train_ind
-
-  train_ind = int(0.8 * len(data_arr_x))
-  x_train = data_arr_x[:train_ind]
-  y_train = data_arr_y[:train_ind]
-  x_test = data_arr_x[train_ind:]
-  y_test = data_arr_y[train_ind:]
+  data = scaler.fit_transform(data)
 
 
-def lstmmodel():
+  X_train,y_train= Create_Features_and_Targets(data,feature_length)
+  X_train = np.reshape(X_train,(X_train.shape[0],X_train.shape[1],1))
 
-  
-  global test_predict
+  print(X_train)
 
-  model = Sequential()
+  # model
+  model = Sequential([
+    LSTM(100,return_sequences=True,input_shape=(X_train.shape[1],1)),
+    Dropout(0.3),
+    LSTM(100, return_sequences = False),
+    Dropout(0.3),
+      
+    Dense(1),
+  ])
+  model.compile(optimizer='adam',loss="mean_squared_error")
+  model.summary()
 
-  model.add(LSTM(512, activation='relu', input_shape=(num_steps, 1), 
-                return_sequences=False))
-  model.add(Dense(units=256, activation='relu'))
-  
+  # Training the model
+  history = model.fit(
+      X_train, 
+      y_train, 
+      epochs = 5, 
+      batch_size = 12, 
+      verbose=1,
+  )
 
-  model.add(Dense(units=1, activation='relu'))
-  
-  
-  model.compile(optimizer="Adam", loss="mean_squared_error", metrics=['mae'])
-  model.fit(x_train, y_train, epochs=25)
+  testData = data_set.iloc[:,1:2] # Get 'Close' feature
+  y_real=testData.iloc[feature_length+1:,0:].values #Actual values
+  x_test = testData.iloc[:,0:].values # data to test
+  # normalizing the Data using Scaler.transform function
+  x_test = scaler.transform(x_test)
+  x_test, y_test = Create_Features_and_Targets(x_test, feature_length)
+  # Making data 3 dimensional
+  x_test = np.reshape(x_test,(x_test.shape[0],x_test.shape[1],1))
+  y_pred = model.predict(x_test)
+  predictions=np.array(scaler.inverse_transform(y_pred)).ravel()
+  result["Date"]=data_set.iloc[feature_length+1:]["Date"]
+  result["Predictions"]=predictions
+  result["OrderDemand"]=data_set.iloc[feature_length+1:]["Order_Demand"]
 
-  test_predict = model.predict(x_test)
-
-  # save model to single file
-  model.save('lstm_model.h5')
-
-def plot_result():
-
-  plt.style.use('ggplot')
-  plt.figure(figsize=(20, 7))
-  plt.plot(y_test, label="True value")
-  plt.plot(test_predict.ravel(), label="Predicted value")
-  plt.legend()
+  result.plot()
   plt.show()
+  print(result)
+  
+  #save model 
+  model.save('lstm_model.h5')
+  
+# ====================================================================
+# main function call
+
+setup()
 
 
+#====================================================================
 
-def lstm_data_transform(x_data, y_data, num_steps=5):
-    """ Changes data to the format for LSTM training 
-for sliding window approach """
-    # Prepare the list for the transformed data
-    X, y = list(), list()
-    # Loop of the entire data set
-    for i in range(x_data.shape[0]):
-        # compute a new (sliding window) index
-        end_ix = i + num_steps
-        # if index is larger than the size of the dataset, we stop
-        if end_ix >= x_data.shape[0]:
-            break
-        # Get a sequence of data for x
-        seq_X = x_data[i:end_ix]
-        # Get only the last element of the sequency for y
-        seq_y = y_data[end_ix]
-        # Append the list with sequencies
-        X.append(seq_X)
-        y.append(seq_y)
-    # Make final arrays
-    x_array = np.array(X)
-    y_array = np.array(y)
-    return x_array, y_array
+# end points declaration 
 
-# End Points 
+@app.route("/products",methods=['GET'])
 
-@app.route('/start',methods=['GET'])
-def start():
-  global data_set
-  print(data_set.info())
-  return data_set.to_json(orient='records')
+def category():
+  global raw_data_set
+  raw_data_set=raw_data_set['Product_code'].value_counts()
+  return raw_data_set.to_json(orient='records')
+
 
 @app.route("/validation",methods=['GET'])
 def validation():
-  global test_result
-  test_len=len(tranning_data_set)-len(test_predict)
-  test_result=tranning_data_set[test_len:]
-  test_result['Predictions']=scaler.inverse_transform(test_predict)
-  test_result['OrderDemand']=scaler.inverse_transform(y_test)
-  return test_result.to_json(orient='records')
+  global result
+  result=result.set_index(result['Date'])
+  return result.to_json(orient='records')
 
-@app.route("/tranning",methods=['GET'])
-def tranning():
-  return tranning_set.to_json(orient='records')
-
-
-@app.route("/forecast",methods=["POST"])
+@app.route("/forecast_to_date",methods=["POST"])
 def forecast():
+  global data_set
+  global scaler 
+  global index_data_set
+  global model
 
   # read incomming json data 
   data=request.get_json()
-  print(data)
+  date=data['date']
+  new_date=datetime.strptime(date, "%Y-%m-%d").date()
+  new_date=new_date - timedelta(days=(feature_length-1))
+  new_date=new_date.strftime("%Y-%m-%d")
+  print(new_date)
 
-  return "forecast"
+
+  result=predict_given_date(index_data_set,new_date, feature_length)
+  df=pd.DataFrame()
+  # df=pd.DataFrame(data=result,columns=["Prediction"])
+  df['Date']=pd.date_range(start=new_date,periods=feature_length)
+  df=df.loc[::-1]
+  df['Prediction']=result
 
 
-@app.route("/plot",methods=['GET'])
-def plot():
-  plot_result()
+  df['Date']= pd.to_datetime(df['Date']).dt.date
+  df.sort_values('Date', inplace=True)
+  df['Date']=df['Date'].astype(str)
+  df=df.set_index(df['Date'])
+  df=df.tail(1)
 
-@app.route("/category",methods=['GET'])
+  return df.to_json(orient='records')
 
-def category():
+@app.route("/forecast_to_range",methods=["POST"])
+def forecast_to_range():
   global data_set
-  data=data_set['ProductCategory'].value_counts()
-  return data.to_json()
-
-@app.route("/warehouse",methods=['GET'])
-def warehouse():
-  global data_set
-  data=data_set['Warehouse'].value_counts()
-  return data.to_json()
-
-@app.route("/by_year",methods=['GET'])
-
-def by_year():
-
-  global data_set
-  df = data_set[['OrderDemand', 'Year']].groupby(["Year"]).sum().reset_index().sort_values(by='Year', ascending=False)
-  return df.to_json()
-
-@app.route("/monthly",methods=['GET'])
-def monthly():
-  global data_set
-  temp_data = data_set.copy()
-  temp_data.Month.replace([1,2,3,4,5,6,7,8,9,10,11,12], ['Jan', 'Feb', 'Mar', 'Apr', 'May',
-                                                        'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], inplace=True)
-  df = temp_data[['OrderDemand',
-                  'Month', 'Year',]].groupby(["Year",
-                                              "Month"]).sum().reset_index().sort_values(by=['Year',
-                                                                                            'Month'], ascending=False)
-  df=df.T
-  return df.to_json()
-
+  global scaler 
+  global index_data_set
+  global model
+  
+  index_data_set=data_set
+  
+  index_data_set=index_data_set.set_index(index_data_set['Date'])
  
- 
-read_data_set()
-reshape()
-split_data()
-lstmmodel()
+  # read incomming json data 
+  data=request.get_json()
+  date=data['date']
+  new_date=datetime.strptime(date, "%Y-%m-%d").date()
+  new_date=new_date - timedelta(days=(feature_length-1))
+  new_date=new_date.strftime("%Y-%m-%d")
+
+  result=predict_given_date(index_data_set,new_date, feature_length)
+  df=pd.DataFrame()
+  # df=pd.DataFrame(data=result,columns=["Prediction"])
+  df['Date']=pd.date_range(start=new_date,periods=feature_length)
+  df=df.loc[::-1]
+  df['Prediction']=result
+  df['Date']= pd.to_datetime(df['Date']).dt.date
+  df.sort_values('Date', inplace=True)
+  df['Date']=df['Date'].astype(str)
+  df=df.set_index(df['Date'])
+  return df.to_json(orient='records')
 
 
 if __name__ == "__main__":
