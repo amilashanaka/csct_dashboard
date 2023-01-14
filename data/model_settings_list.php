@@ -2,6 +2,6 @@
 
 include_once('./inc/conn.php');
  
-$sql = "SELECT * FROM aw_product_demand ";
+$sql = "SELECT * FROM model_settings";
 $result = mysqli_query($conn, $sql);
  

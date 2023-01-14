@@ -1,12 +1,15 @@
-  <!-- Info boxes -->
+<?php include_once('inc/function.php');?>
+
+
+<!-- Info boxes -->
         <div class="row">
           <div class="col-12 col-sm-6 col-md-3">
             <div class="info-box">
               <span class="info-box-icon bg-info elevation-1"><i class="fas fa-brain"></i></span>
 
               <div class="info-box-content">
-                <span class="info-box-text">LSTM Nodes</span>
-                <a href="user_daily_statement_dash.php"><span class="info-box-number">512</span></a>
+                <span class="info-box-text">LSTM Time Steps</span>
+                <a href="user_daily_statement_dash.php"><span class="info-box-number"><?=get_time_steps($conn)?></span></a>
               </div>
               <!-- /.info-box-content -->
             </div>
@@ -19,7 +22,7 @@
 
               <div class="info-box-content">
                 <span class="info-box-text">Accurecy</span>
-                <a href="winner_paid_list.php"><span class="info-box-number">30</span></a>
+                <a href="winner_paid_list.php"><span class="info-box-number"><?=get_accurecy($conn)?> %</span></a>
               </div>
               <!-- /.info-box-content -->
             </div>
@@ -38,7 +41,7 @@
               <div class="info-box-content">
                   
                 <span class="info-box-text">Times Trained</span>
-                <a href="game_list.php"><span class="info-box-number">50</span></a>
+                <a href="game_list.php"><span class="info-box-number"><?=get_epochs($conn)?></span></a>
               </div>
               <!-- /.info-box-content -->
             </div>
@@ -47,11 +50,11 @@
           <!-- /.col -->
           <div class="col-12 col-sm-6 col-md-3">
             <div class="info-box mb-3">
-              <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-level-up"></i></span>
+              <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-clock"></i></span>
 
              <div class="info-box-content">
-                <span class="info-box-text">Confidence</span>
-                  <a href="user_list.php"><span class="info-box-number">56</span>
+                <span class="info-box-text">Train Time</span>
+                  <a href="user_list.php"><span class="info-box-number"><?= get_execute_time($conn)?> minutes</span>
                   </a>
               </div>
             

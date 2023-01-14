@@ -11,14 +11,12 @@ for (var i = 0; i < 100; i++) {
   data2.push((Math.cos(i / 5) * (i / 5 - 10) + i / 6) * 5);
 }
 option3 = {
-  title: {
-    text: 'Bar Animation Delay'
-  },
+
   legend: {
-    data: ['bar', 'bar2']
+    data: ['Train', 'Time taken']
   },
   toolbox: {
-    // y: 'bottom',
+  y: 'bottom',
     feature: {
       magicType: {
         type: ['stack']
@@ -39,7 +37,7 @@ option3 = {
   yAxis: {},
   series: [
     {
-      name: 'bar',
+      name: 'Train Time',
       type: 'bar',
       data: data1,
       emphasis: {
@@ -50,7 +48,7 @@ option3 = {
       }
     },
     {
-      name: 'bar2',
+      name: 'Accurecy',
       type: 'bar',
       data: data2,
       emphasis: {

@@ -1,14 +1,17 @@
 <?php
-include_once './data/data_list.php';
+include_once './data/data_mp.php';
 include_once('header.php');
 
+
 ?>
+
+
 
 
 <body class="hold-transition sidebar-mini">
     <div class="wrapper">
         <!-- Navbar -->
-       
+
         <?php include_once('./nav_bar.php'); ?>
         <!-- Main Sidebar Container -->
         <?php include_once('./side_bar.php'); ?>
@@ -19,15 +22,15 @@ include_once('header.php');
             <!-- Content Header (Page header) -->
 
             <?php
-            $title = "Row Data Set";
-            $t1="Data";
-            $t2= "  List";
+            $title = "Model Settings List ";
+            $t1="Model";
+            $t2= "  Settings List";
             
           
             
             ?>
 
-<?php include_once('page_header.php')?>
+            <?php include_once('page_header.php')?>
 
             <!-- Main content -->
             <section class="content">
@@ -39,7 +42,7 @@ include_once('header.php');
                             <div class="card-header">
                                 <h3 class="card-title">
                                     <button type="button" class="btn btn-block  btn-outline-secondary"
-                                        onclick="location.href = 'new_record.php';">Add New Record</button>
+                                        onclick="location.href = 'settings.php';">Add New Record</button>
 
                                 </h3>
                             </div>
@@ -52,22 +55,34 @@ include_once('header.php');
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>Product Code</th>
-                                            <th>WareHouse</th>
-                                            <th>Date</th>
-                                            <th>Order Demand</th>
+                                            <th>Input Nodes</th>
+                                            <th>Hidden layer 1 nodes</th>
+                                            <th>Hidden layer 2 nodes</th>
+                                            <th>output nodes</th>
+                                            <th>Epochs</th>
+                                            <th>RMSE</th>
+                                            <th>MAE</th>
+                                            <th>MAPE</th>
+                                            <th>Accurecy %</th>
 
-                                           
+
+
+
                                         </tr>
                                     </thead>
                                     <tfoot>
                                         <tr>
-                                        <th>#</th>
-                                            <th>Product Code</th>
-                                            <th>WareHouse</th>
-                                            <th>Date</th>
-                                            <th>Order Demand</th>
-                                           
+                                            <th>#</th>
+                                            <th>Input Nodes</th>
+                                            <th>Hidden layer 1 nodes</th>
+                                            <th>Hidden layer 2 nodes</th>
+                                            <th>output nodes</th>
+                                            <th>Epochs</th>
+                                            <th>RMSE</th>
+                                            <th>MAE</th>
+                                            <th>MAPE</th>
+                                            <th>Accurecy %</th>
+
                                         </tr>
                                     </tfoot>
                                     <tbody>
@@ -79,12 +94,17 @@ include_once('header.php');
                                             ?>
                                         <tr>
                                             <td><?php echo $i++; ?></td>
-                                            <td><a
-                                                    href="product.php?gpid=<?php echo base64_encode($row['Product_code']); ?>"><?php echo $row['Product_code']; ?></a>
-                                            </td>
-                                            <td><?= $row['Warehouse'] ?></td>
-                                            <td><?= $row['Date'] ?></td>
-                                            <td><?= $row['Order_Demand'] ?></td>
+
+                                            <td><?= $row['input_units'] ?></td>
+                                            <td><?= $row['hidden_layer_1'] ?></td>
+                                            <td><?= $row['hidden_layer_2'] ?></td>
+                                            <td><?= $row['output_units'] ?></td>
+                                            <td><?= $row['epochs'] ?></td>
+                                            <td><?= round($row['rmse'],3) ?></td>
+                                            <td><?= round($row['mae'],3) ?></td>
+                                            <td><?= $row['mape'] ?></td>
+                                            <td><?= $row['accurecy'] ?></td>
+
                                         </tr>
                                         <?php } ?>
                                     </tbody>

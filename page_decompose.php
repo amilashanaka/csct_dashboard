@@ -1,5 +1,4 @@
 <?php
-
 include_once('inc/conn.php');
 include_once('header.php');
 
@@ -14,7 +13,7 @@ include_once('header.php');
         <!-- Main Sidebar Container -->
         <?php include_once('./side_bar.php'); ?>
 
-        <?php include_once('dash_board.php');?>
+        <?php include_once('decompose.php');?>
 
         <?php include_once('control_side_bar.php');?>
 

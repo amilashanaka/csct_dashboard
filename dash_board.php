@@ -44,17 +44,16 @@
             var chartDom = document.getElementById('chart1');
             var myChart = echarts.init(chartDom);
             var option;
-            var option;
 
             option = {
                 title: {
-                    text: 'Prediction Result'
+                    text: 'Order Deamands'
                 },
                 tooltip: {
                     trigger: 'axis'
                 },
                 legend: {
-                    data: ['Validation', 'Prediction','Error']
+                    data: ['Order Demand', 'Predictions', 'Error']
                 },
                 grid: {
                     left: '3%',
@@ -69,36 +68,99 @@
                 },
                 xAxis: {
                     type: 'category',
-                    boundaryGap: false,
-                    data: [<?= $date_validate?>]
+
+                    data: [<?=$date_validate?>]
                 },
                 yAxis: {
                     type: 'value'
                 },
                 series: [{
-                        name: 'Prediction',
+                        name: 'Order Deamand',
                         type: 'line',
-                        stack: 'Total',
+
+                        data: [<?=$order_validate?>]
+                    },
+                    {
+                        name: 'Predections',
+                        type: 'line',
+
                         data: [<?=$predection?>]
                     },
                     {
-                        name: 'Validation',
-                        type: 'line',
-                        stack: 'Total',
-                        data: [<?=$order_validate?>]
-                    },{
                         name: 'Error',
                         type: 'line',
-                        stack: 'Total',
+
                         data: [<?=$error?>]
                     }
-                    
                 ]
             };
-
             option && myChart.setOption(option);
             </script>
-            <script src="dist/js/chart2.js" type="text/javascript"> </script>
+
+
+            <script type="text/javascript">
+                var dom = document.getElementById('chart2');
+            var myChart = echarts.init(dom, null, {
+                renderer: 'canvas',
+                useDirtyRect: false
+            });
+            var app = {};
+
+            var option2;
+
+            option2 = {
+                tooltip: {
+                  trigger: 'item'
+                },
+                legend: {
+                  bottom: '5%',
+                  left: 'center'
+                },
+                series: [
+                  {
+                    name: 'Access From',
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                      borderRadius: 10,
+                      borderColor: '#fff',
+                      borderWidth: 2
+                    },
+                    label: {
+                      show: false,
+                      position: 'center'
+                    },
+                    emphasis: {
+                      label: {
+                        show: true,
+                        fontSize: 40,
+                        fontWeight: 'bold'
+                      }
+                    },
+                    labelLine: {
+                      show: false
+                    },
+                    data: [
+                      { value: <?=$total_order_demands?>, name: 'Order demands' },
+                      { value:  <?=$total_predection?>, name: 'Predictions' },
+                      { value: <?=$total_error?>, name: 'Error' },
+                    ]
+                  }
+                ]
+              };
+
+
+            if (option2 && typeof option2 === 'object') {
+                myChart.setOption(option2);
+            }
+
+            window.addEventListener('resize', myChart.resize);
+
+            </script>
+
+
+          
             <script src="dist/js/chart3.js" type="text/javascript"> </script>
 
 

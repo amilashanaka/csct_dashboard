@@ -47,15 +47,54 @@ include_once('header.php');
                                         <div class="form-row">
 
                                             <div class="col-lg-6 col-md-6 form-group">
-                                                <lable>Number of Nodes for Layer 1:</lable>
+                                                <lable>Feature Length:</lable>
 
-                                                <input type="text" class="form-control" name="layer1_nodes"
+                                                <input type="text" class="form-control" name="feture_length"
                                                     placeholder="0">
                                             </div>
                                             <div class="col-lg-6 col-md-6 form-group">
-                                            <lable>Number of Nodes for Layer 2:</lable>
-                                            
-                                            <input type="text" class="form-control" name="layer2_nodes"
+                                                <lable>Batch Size:</lable>
+
+                                                <input type="text" class="form-control" name="batch_size"
+                                                    placeholder="0">
+
+                                            </div>
+
+                                            <div class="col-lg-6 col-md-6 form-group">
+                                                <lable>Epochs:</lable>
+
+                                                <input type="text" class="form-control" name="epochs"
+                                                    placeholder="0">
+
+                                            </div>
+
+                                            <div class="col-lg-6 col-md-6 form-group">
+                                                <lable>Input Layer:</lable>
+
+                                                <input type="text" class="form-control" name="input_units"
+                                                    placeholder="0">
+
+                                            </div>
+
+
+                                            <div class="col-lg-6 col-md-6 form-group">
+                                                <lable>Hidden Layer 1:</lable>
+
+                                                <input type="text" class="form-control" name="hidden_layer_1"
+                                                    placeholder="0">
+                                            </div>
+                                            <div class="col-lg-6 col-md-6 form-group">
+                                                <lable>Hidden Layer 2:</lable>
+
+                                                <input type="text" class="form-control" name="hidden_layer_2"
+                                                    placeholder="0">
+
+                                            </div>
+
+                                            <div class="col-lg-6 col-md-6 form-group">
+                                                <lable>Output Layer:</lable>
+
+                                                <input type="text" class="form-control" name="output_layer"
                                                     placeholder="0">
 
                                             </div>
@@ -63,6 +102,20 @@ include_once('header.php');
 
 
 
+
+                                        </div>
+
+                                        <div class="form-row">
+
+                                        <div class="col-md-6">
+                                       
+                                        </div>
+
+                                        <div class="col-md-6 ">
+                                        <input type="submit" class="btn btn-outline-success float-right" value="Add New">
+                                        </div>
+
+                                       
                                         </div>
 
 
