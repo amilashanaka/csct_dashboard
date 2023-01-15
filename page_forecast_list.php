@@ -1,11 +1,8 @@
 <?php
-include_once './data/data_mp.php';
+include_once './data/forecast_data _list.php';
 include_once('header.php');
 
-
 ?>
-
-
 
 
 <body class="hold-transition sidebar-mini">
@@ -22,9 +19,9 @@ include_once('header.php');
             <!-- Content Header (Page header) -->
 
             <?php
-            $title = "Model Settings List ";
+            $title = "Forecast Oder Demand List ";
             $t1="Model";
-            $t2= "  Settings List";
+            $t2= "  Forecast List";
             
           
             
@@ -55,18 +52,9 @@ include_once('header.php');
                                     <thead>
                                         <tr>
                                             <th>#</th>
-                                            <th>Input Nodes</th>
-                                            <th>Hidden layer 1 nodes</th>
-                                            <th>Hidden layer 2 nodes</th>
-                                            <th>output nodes</th>
-                                            <th>Epochs</th>
-                                            <th>RMSE</th>
-                                            <th>MAE</th>
-                                            <th>MAPE</th>
-                                            <th>Accurecy %</th>
-                                        
-
-
+                                            <th>Date</th>
+                                            <th>Forecast</th>
+                                            
 
 
                                         </tr>
@@ -74,40 +62,24 @@ include_once('header.php');
                                     <tfoot>
                                         <tr>
                                             <th>#</th>
-                                            <th>Input Nodes</th>
-                                            <th>Hidden layer 1 nodes</th>
-                                            <th>Hidden layer 2 nodes</th>
-                                            <th>output nodes</th>
-                                            <th>Epochs</th>
-                                            <th>RMSE</th>
-                                            <th>MAE</th>
-                                            <th>MAPE</th>
-                                            <th>Accurecy %</th>
+                                            <th>Date</th>
+                                            <th>Forecast</th>
                                            
-
                                         </tr>
                                     </tfoot>
                                     <tbody>
                                         <?php
                                         $i = 1;
-                                        while ($row = mysqli_fetch_assoc($result)) {
+                                        foreach($result as $key=>$value) {
                                             
                                             
                                             ?>
                                         <tr>
                                             <td><?php echo $i++; ?></td>
-
-                                            <td><?= $row['input_units'] ?></td>
-                                            <td><?= $row['hidden_layer_1'] ?></td>
-                                            <td><?= $row['hidden_layer_2'] ?></td>
-                                            <td><?= $row['output_units'] ?></td>
-                                            <td><?= $row['epochs'] ?></td>
-                                            <td><?= round($row['rmse'],3) ?></td>
-                                            <td><?= round($row['mae'],3) ?></td>
-                                            <td><?= $row['mape'] ?></td>
-                                            <td><?= $row['accurecy'] ?></td>
-                                          
-
+                        
+                                            <td><?= $key ?></td>
+                                            <td><?= $value ?></td>
+                             
                                         </tr>
                                         <?php } ?>
                                     </tbody>

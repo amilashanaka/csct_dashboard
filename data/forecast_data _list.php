@@ -1,5 +1,5 @@
 <?php
-
+include_once('./inc/conn.php');
 $curl = curl_init();
 
 curl_setopt_array($curl, array(
@@ -29,17 +29,16 @@ $error = '';
 
 foreach ($arr_new as $key => $value) {
    
-    $dates = $dates . "'" .$value['Date']. "',";
-    $predection = $predection . "'" .round( $value['Order_Demand']). "',";
+    $dates = $value['Date'];
+    $predection = round( $value['Order_Demand']);
 
-  array_push($result, 'Date', $dates);
+  $result[$dates] = $predection;
+
  
 }
 
 //==============================================================================
 
 // Fetch warehouse details from database
-
-
 
 

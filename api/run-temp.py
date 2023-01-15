@@ -60,6 +60,8 @@ x_test = np.array([])
 y_test = np.array([])
 predictions = np.array([])
 
+data=[]
+
 
 # Initialising the LSTM model with training
 
@@ -70,6 +72,11 @@ batch_size = 5
 epochs = 10
 accuracy = 0
 execute_time = 0
+time_steps=0
+features=0
+execute_time=0
+
+
 input_units = 100
 hidden_layer_1 = 67
 hidden_layer_2 = 34
@@ -134,9 +141,20 @@ def read_data_set():
         'SELECT * FROM aw_product_demand', con=db_connection)
 
     # Validate Date
+  
+
     raw_data_set['Date'] = pd.to_datetime(raw_data_set['Date']).dt.date
 
     raw_data_set['Order_Demand'] = raw_data_set['Order_Demand'].astype('int64')
+
+    return raw_data_set
+
+def pre_process_data():
+
+    # Declare global variable
+    global data_set
+    global raw_data_set
+    global index_data_set
 
     # combine to single date
     data_set = raw_data_set.groupby('Date')['Order_Demand'].sum().reset_index()
@@ -164,14 +182,6 @@ def read_data_set():
     return data_set
 
 
-# -------------------------------------------------------------------------------
-
-
-
-
-
-#------------------------------------------------------------------------------
-
 
 # -------------------------------------------------------------------------------
 def save_tranning_history(epochs, time_steps, batch_size, execute_time, rmse,mae,mape,accurecy,error):
@@ -182,12 +192,13 @@ def save_tranning_history(epochs, time_steps, batch_size, execute_time, rmse,mae
     id = db_connection.execute("INSERT INTO `trannings` ( `date_time`, `epochs`, `time_steps`, `batch_size`, `execute_time`, `rmse`,`mae`,`mape`,`accurecy`,`error`) VALUES ( CURRENT_TIMESTAMP, '" +
                                str(epochs)+"', '"+str(time_steps)+"', '"+str(batch_size)+"', '"+str(execute_time)+"', '"+str(rmse)+"',  '"+str(mae)+"', '"+str(mape)+"','"+str(accurecy)+"','"+str(error)+"')")
 
-    db_connection.execute("INSERT INTO `model_perforemence` ( `date_time`, `trannings_id`, `model_settings_id`) VALUES ( CURRENT_TIMESTAMP, '"+str(id.lastrowid)+"', '"+str(seetings_id)+"')")
+    db_connection.execute("INSERT INTO `model_perforemence` ( `date_time`, `trannings_id`, `model_settings_id`) VALUES ( CURRENT_TIMESTAMP, '"+str(seetings_id)+"', '"+str(id.lastrowid)+"')")
     print("Row Added  = ", id.rowcount)
 
 
 
 #-------------------------------------------------------------------------------
+
 # Function to create x and y data
 
 
@@ -225,12 +236,7 @@ def predict_given_date(data, date, feature_length):
         last_date = data.tail(1)
         data.loc[date] = 0
     idx = data.index.get_loc(date)
-    # close_col = data.iloc[:,1:2]
-    # close_col = close_col.iloc[idx - feature_length : idx,:].values
-    # close_col = np.expand_dims(scaler.transform(close_col) , axis = 0)
-    # Prediction = model.predict(close_col)
-    # Prediction=np.array(Prediction).reshape(-1, 1)
-    # Prediction = scaler.inverse_transform(Prediction)
+
     return str(last_date)
 
 
@@ -266,14 +272,7 @@ def one_step_ahade():
 
 # -----------------------------------------------------------------------------
 
-
-# =========================== End of support Functions =================
-
-# ============================= Main funtion ===================
-def setup():
-
-    # Declare Global variables =================
-
+def reshape_data():
     global data_set
     global predictions
     global result
@@ -281,9 +280,10 @@ def setup():
     global accuracy
     global execute_time
     global rmse
+    global time_steps
+    global features
+    global data
 
-
-    print(data_set.describe())
 
     # Filter order Deamands array
     data_set["Order_Demand"] = pd.to_numeric(
@@ -322,6 +322,67 @@ def setup():
     features = x_train.shape[2]
     print("Number of TimeSteps:", time_steps)
     print("Number of Features:", features)
+
+
+
+
+    return "reshape"
+
+
+#-------------------------------------------------------------------------------
+
+def model_train():
+
+    global execute_time 
+
+    # Measuring the time taken by the model to train
+    start_time = time.time()
+
+     # Fitting the RNN to the Training set
+    model_history = model.fit(x_train, y_train, batch_size, epochs)
+
+    end_time = time.time()
+    execute_time = round((end_time-start_time)/60, 2)
+    print("__Total Time Taken: ", execute_time, '   Minutes___')
+
+    # Making predictions on test data
+    predicted = model.predict(x_test)
+    predicted = scaler.inverse_transform(predicted)
+
+    # Getting the original price values for testing data
+    orig = y_test
+    orig = scaler.inverse_transform(y_test)
+
+    error_calculation(orig, predicted,time_steps)
+
+    # Generating predictions on full data
+    TrainPredictions = scaler.inverse_transform(model.predict(x_train))
+    TestPredictions = scaler.inverse_transform(model.predict(x_test))
+    FullDataPredictions = np.append(TrainPredictions, TestPredictions)
+
+    # Save data to result data set
+
+    result["Date"] = data_set.iloc[time_steps:]["Date"]
+    result["Predictions"] = FullDataPredictions
+    result["OrderDemand"] = data[time_steps:]
+
+    return "predection cal"
+
+
+#-------------------------------------------------------------------------------
+
+def modeling():
+    global data_set
+    global predictions
+    global result
+    global scaler
+    global accuracy
+    global execute_time
+    global rmse
+    global time_steps
+    global features
+
+    reshape_data()
 
     # Add First LSTM Layer
     model.add(LSTM(units=input_units, activation='relu', input_shape=(
@@ -363,11 +424,34 @@ def setup():
     orig = y_test
     orig = scaler.inverse_transform(y_test)
 
-    # Accuracy of the predictions
+    error_calculation(orig, predicted,time_steps)
+
+    # Generating predictions on full data
+    TrainPredictions = scaler.inverse_transform(model.predict(x_train))
+    TestPredictions = scaler.inverse_transform(model.predict(x_test))
+    FullDataPredictions = np.append(TrainPredictions, TestPredictions)
+
+    # Save data to result data set
+
+    result["Date"] = data_set.iloc[time_steps:]["Date"]
+    result["Predictions"] = FullDataPredictions
+    result["OrderDemand"] = data[time_steps:]
+
+    return "modeling completed"
+
+#----------------------------------------------------------------
+
+def error_calculation(orig, predicted,time_steps):
+
+     # Accuracy of the predictions
     accuracy = 100 - (100*(abs(orig-predicted)/orig)).mean()
+
     error=(abs(orig-predicted))
     error=np.sum(error)
     error = round(error,2)
+    print("____Total Error_____\n")
+    print(error)
+
 
     mse = sklearn.metrics.mean_squared_error(orig, predicted) 
     rmse=math.sqrt(mse)
@@ -383,23 +467,34 @@ def setup():
     save_tranning_history(epochs, time_steps, batch_size,
                           execute_time, rmse,mae,mape,accuracy,error)
 
-    # Generating predictions on full data
-    TrainPredictions = scaler.inverse_transform(model.predict(x_train))
-    TestPredictions = scaler.inverse_transform(model.predict(x_test))
-    FullDataPredictions = np.append(TrainPredictions, TestPredictions)
+    return "error_calculation"
 
-    # Save data to result data set
+# =========================== End of support Functions =================
 
-    result["Date"] = data_set.iloc[time_steps:]["Date"]
-    result["Predictions"] = FullDataPredictions
-    result["OrderDemand"] = data[time_steps:]
+# ============================= Main funtion ===================
+def setup():
+
+    # Declare Global variables =================
+
+    global data_set
+    global predictions
+    global result
+    global scaler
+    global accuracy
+    global execute_time
+    global rmse
+
+    # Read Data from DataSet
+    read_data_set()
+    pre_process_data()
+    modeling()
+
 
 # ====================================================================
 # main function call
 
 read_model_settings()
-# Read Data from DataSet
-read_data_set()
+
 
 setup()
 
@@ -407,26 +502,6 @@ setup()
 # ====================================================================
 
 # end points declaration
-
-@app.route("/plot_result", methods=['GET'])
-def plot_result():
-
-    # plotting the full data
-    plt.plot(result["Predictions"], color='blue',
-             label='Predicted Order Demand')
-    plt.plot(result["OrderDemand"], color='lightblue', label='Original Price')
-    plt.title('Order Demand Predictions')
-    plt.xlabel(' Date')
-    plt.ylabel('Order Demand')
-    plt.legend()
-    fig = plt.gcf()
-    fig.set_figwidth(20)
-    fig.set_figheight(8)
-    plt.show()
-
-    return "plot complete"
-
-#----------------------------------------------------------------
 
 @app.route("/predict_for_one_product", methods=['POST'])
 def predict_for_one_product():
@@ -465,6 +540,8 @@ def predict_for_one_product():
 
 
 
+    # Data Frames
+    raw_data_set = pd.DataFrame()
     data_set = pd.DataFrame()
     index_data_set = pd.DataFrame()
     tranning_set = pd.DataFrame()
@@ -472,8 +549,6 @@ def predict_for_one_product():
     predictions_set = pd.DataFrame()
     decompose_set = pd.DataFrame()
     model_settings  = pd.DataFrame()
-    raw_data_set= pd.DataFrame()
-
 
     # numpy Arrays
     data_arr_x = np.array([])
@@ -498,14 +573,23 @@ def predict_for_one_product():
     execute_time = 0
     time_steps=0
     features=0
+ 
 
+
+    input_units = 100
+    hidden_layer_1 = 67
+    hidden_layer_2 = 34
+    output_units = 1
+
+    seetings_id=0
 
     # Scaler
     scaler = MinMaxScaler()
 
-  
-# Read Data from DataSet
+
+
     read_data_set()
+
 
 
      # read incomming json data
@@ -513,11 +597,11 @@ def predict_for_one_product():
     product_code = data['product_code']
     
     # Filter by product code 
-    data_set=raw_data_set[raw_data_set['Product_code']==product_code]
+    raw_data_set=raw_data_set[raw_data_set['Product_code']==product_code]
 
 
         # combine to single date
-    data_set = data_set.groupby('Date')['Order_Demand'].sum().reset_index()
+    data_set = raw_data_set.groupby('Date')['Order_Demand'].sum().reset_index()
 
     data_set.sort_values('Date', inplace=True)
     data_set['Date'] = data_set['Date'].astype(str)
@@ -528,14 +612,30 @@ def predict_for_one_product():
     index_data_set = index_data_set.drop('Date', axis=1)
 
     read_model_settings()
-    setup()
 
+    reshape_data()
+    model_train()
 
     return "one product prediction"+product_code
 
+@app.route("/plot_result", methods=['GET'])
+def plot_result():
 
+    # plotting the full data
+    plt.plot(result["Predictions"], color='blue',
+             label='Predicted Order Demand')
+    plt.plot(result["OrderDemand"], color='lightblue', label='Original Price')
+    plt.title('Order Demand Predictions')
+    plt.xlabel(' Date')
+    plt.ylabel('Order Demand')
+    plt.legend()
+    fig = plt.gcf()
+    fig.set_figwidth(20)
+    fig.set_figheight(8)
+    plt.show()
 
-#----------------------------------------------------------------
+    return "plot complete"
+
 
 @app.route('/decompose', methods=['GET'])
 def decompose():

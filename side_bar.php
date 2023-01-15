@@ -44,9 +44,9 @@
             </a>
             <ul class="nav nav-treeview">
               <li class="nav-item">
-                <a href="run.php" class="nav-link">
+                <a href="model_data_selection.php" class="nav-link">
                   <i class="fa fa-play nav-icon"></i>
-                  <p>Model History</p>
+                  <p>Model Run</p>
                 </a>
               </li>
               <li class="nav-item">
@@ -75,7 +75,7 @@
               </li>
 
               <li class="nav-item">
-                <a href="page_forecast.php" class="nav-link">
+                <a href="page_forecast_list.php" class="nav-link">
                   <i class="fas fa-list nav-icon"></i>
                   <p>List Forecast</p>
                 </a>
